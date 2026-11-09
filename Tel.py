@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart, Command
 # Вставь сюда токен, который тебе выдал BotFather при создании бота
 BOT_TOKEN = "9289438212:AAE0s8MeGLYGHaCd2rNpjZD7ZDNCzSB8sjA"
 # Ссылка на твое созданное Mini App в Telegram (Замени на свой точный поддомен!)
-MINI_APP_URL = "https://miniapp.my1.ru/index.html"
+MINI_APP_URL = "https://mr-enotik.github.io/dashboard/"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
