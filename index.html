@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Панель Управления Бот-Интерфейсом</title>
+    <!-- Подключаем Tailwind CSS для верстки -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Официальный скрипт Telegram Web App SDK -->
+    <script src="https://telegram.org"></script>
+    <!-- Chart.js для отрисовки Блока 1 -->
+    <script src="https://jsdelivr.net"></script>
+    
+    <style>
+        /* Принудительно отключаем любые эффекты выделения текста и наведения */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        /* Кастомный скроллбар, если понадобится */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2C374E;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-[#141822] text-white min-h-screen p-4 font-sans antialiased flex flex-col gap-4">
+
+    <!-- Заголовок / Имя терминала -->
+    <div class="flex justify-between items-center px-1">
+        <h1 class="text-base font-bold text-[#7E8BA2] tracking-wide">ТЕРМИНАЛ ЗАКАЗОВ</h1>
+        <span class="text-xs bg-[#1E2533] text-[#3B82F6] px-2 py-0.5 rounded-full font-medium" id="user-status">Online</span>
+    </div>
+
+    <!-- БЛОК 1: График продаж (Месяц / Кол-во продаж) -->
+    <div class="bg-[#1E2533] rounded-2xl p-4 flex flex-col gap-2 border border-[#232B3B]">
+        <div class="flex justify-between items-center">
+            <span class="text-xs uppercase tracking-wider text-[#7E8BA2] font-semibold">Динамика продаж</span>
+            <span class="text-xs text-[#3B82F6] font-medium">Топ месяцев</span>
+        </div>
+        <div class="w-full relative h-40 mt-1">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- СРЕДНИЙ БЛОК: Экспресс-статистика (Метрики 6:7 и 8:9) -->
+    <div class="bg-[#1E2533] rounded-2xl p-4 flex flex-col gap-3 border border-[#232B3B]">
+        <div class="flex justify-between items-center text-sm border-b border-[#2C374E] pb-2.5">
+            <span class="text-[#7E8BA2]">Оборот (6):</span>
+            <span class="font-bold text-white text-base" id="metric-turnover">450 000 ₽ (7)</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+            <span class="text-[#7E8BA2]">Заказы (8):</span>
+            <span class="font-bold text-white text-base" id="metric-orders">1 250 шт. (9)</span>
+        </div>
+    </div>
+
+    <!-- СЕТКА НАВИГАЦИИ: Блоки 2, 3, 4, 5 -->
+    <div class="grid grid-cols-2 gap-3 mt-auto">
+        <!-- 2: Склад -->
+        <div onclick="handleNav('склад')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">📦</span>
+            <span class="font-semibold text-sm text-white mt-1">Склад (2)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Остатки и учет</span>
+        </div>
+        
+        <!-- 3: Статистика -->
+        <div onclick="handleNav('статистика')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">📊</span>
+            <span class="font-semibold text-sm text-white mt-1">Статистика (3)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Полный анализ</span>
+        </div>
+        
+        <!-- 4: Терминал заказов -->
+        <div onclick="handleNav('терминал')" class="bg-[#1E2533] border border-[#3B82F6] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-[#3B82F6] text-[9px] font-bold text-white px-1.5 py-0.5 rounded-bl-lg">LIVE</div>
+            <span class="text-xl">💻</span>
+            <span class="font-semibold text-sm text-white mt-1">Задания (4)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Список текущих</span>
+        </div>
+        
+        <!-- 5: Настройки -->
+        <div onclick="handleNav('настройки')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">⚙️</span>
+            <span class="font-semibold text-sm text-white mt-1">Настройки (5)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Конфигурация</span>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Расширяем Mini App на весь экран смартфона
+
+        // Изменяем нативные цвета шапки и статус-бара Telegram
+        tg.setHeaderColor('#141822');
+        tg.setBackgroundColor('#141822');
+
+        // Логика нажатий на кнопки (передача событий обратно в бота)
+        function handleNav(target) {
+            // Легкая вибрация смартфона при клике (нативный фидбек)
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            // Отправляем текстовое сообщение боту и закрываем окно (опционально)
+            tg.sendData("action_open_" + target);
+        }
+
+        // Рендеринг Элегантного Графика (Блок 1)
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Создаем аккуратный вертикальный градиент под линией графика
+        const chartGradiant = ctx.createLinearGradient(0, 0, 0, 160);
+        chartGradiant.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+        chartGradiant.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя'],
+                datasets: [{
+                    data: [420, 580, 490, 710, 680, 850, 920],
+                    borderColor: '#3B82F6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3B82F6',
+                    pointHoverBackgroundColor: '#3B82F6', // hover отключен на уровне CSS, сохраняем стабильность цвета
+                    fill: true,
+                    backgroundColor: chartGradiant,
+                    tension: 0.4, // Гладкие Spline углы
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false } // Отключаем легенду, чтобы освободить место
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#52627A', font: { size: 10 } }
+                    },
+                    y: {
+                        display: false, // Скрываем ось Y для сохранения минимализма
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
