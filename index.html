@@ -2,416 +2,157 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Терминал Заказов</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Панель Управления Бот-Интерфейсом</title>
+    <!-- Подключаем Tailwind CSS для верстки -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Официальный скрипт Telegram Web App SDK -->
+    <script src="https://telegram.org"></script>
+    <!-- Chart.js для отрисовки Блока 1 -->
+    <script src="https://jsdelivr.net"></script>
+    
     <style>
+        /* Принудительно отключаем любые эффекты выделения текста и наведения */
         * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        body {
-            background-color: #141822;
-            color: #ffffff;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            min-height: 100vh;
+        /* Кастомный скроллбар, если понадобится */
+        ::-webkit-scrollbar {
+            width: 4px;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 4px;
-        }
-        .header h1 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #7E8BA2;
-            letter-spacing: 0.5px;
-        }
-        .back-btn {
-            font-size: 12px;
-            background-color: #1E2533;
-            color: #3B82F6;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid #232B3B;
-            display: none;
-        }
-        .card {
-            background-color: #1E2533;
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            border: 1px solid #232B3B;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-        .card-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #7E8BA2;
-            font-weight: 600;
-        }
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            margin-top: 4px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 13px;
-        }
-        th {
-            color: #7E8BA2;
-            font-weight: 600;
-            padding: 10px 8px;
-            border-bottom: 1px solid #2C374E;
-            font-size: 11px;
-            text-transform: uppercase;
-        }
-        td {
-            padding: 12px 8px;
-            border-bottom: 1px solid #232B3B;
-            color: #ffffff;
-        }
-        .editable {
-            color: #3B82F6;
-            font-weight: 600;
-            outline: none;
-            border-bottom: 1px dashed #3B82F6;
-            user-select: text;
-        }
-        .editable:focus {
-            background-color: #242D3E;
-            border-bottom: 1px solid #3B82F6;
-            border-radius: 4px;
-            padding: 2px 4px;
-        }
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            padding-bottom: 10px;
-        }
-        .metric-row.border {
-            border-bottom: 1px solid #2C374E;
-        }
-        .metric-label {
-            color: #7E8BA2;
-        }
-        .metric-value {
-            font-weight: 700;
-            color: #ffffff;
-            font-size: 16px;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: auto;
-        }
-        .btn {
-            background-color: #1E2533;
-            border: 1px solid #232B3B;
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            cursor: pointer;
-        }
-        .btn:active {
-            background-color: #252F41;
-        }
-        .btn-icon {
-            font-size: 20px;
-        }
-        .btn-title {
-            font-weight: 600;
-            font-size: 14px;
-            color: #ffffff;
-            margin-top: 4px;
-        }
-        .btn-desc {
-            font-size: 11px;
-            color: #7E8BA2;
-        }
-        .chart-container {
-            width: 100%;
-            height: 140px;
-            display: flex;
-            flex-direction: column;
-        }
-        .chart-svg {
-            width: 100%;
-            height: 120px;
-        }
-        .chart-labels {
-            display: flex;
-            justify-content: space-between;
-            padding: 0 10px;
-            margin-top: 4px;
-        }
-        .chart-axis-label {
-            font-size: 10px;
-            color: #52627A;
-        }
-        .screen {
-            display: none;
-            flex-direction: column;
-            gap: 16px;
-            width: 100%;
-        }
-        .screen.active {
-            display: flex;
+        ::-webkit-scrollbar-thumb {
+            background: #2C374E;
+            border-radius: 10px;
         }
     </style>
 </head>
-<body>
+<body class="bg-[#141822] text-white min-h-screen p-4 font-sans antialiased flex flex-col gap-4">
 
-    <div class="header">
-        <h1 id="header-title">ТЕРМИНАЛ ЗАКАЗОВ</h1>
-        <div id="back-button" class="back-btn" onclick="showMainScreen()">Назад</div>
+    <!-- Заголовок / Имя терминала -->
+    <div class="flex justify-between items-center px-1">
+        <h1 class="text-base font-bold text-[#7E8BA2] tracking-wide">ТЕРМИНАЛ ЗАКАЗОВ</h1>
+        <span class="text-xs bg-[#1E2533] text-[#3B82F6] px-2 py-0.5 rounded-full font-medium" id="user-status">Online</span>
     </div>
 
-    <!-- ================= ЭКРАН 1: ГЛАВНЫЙ ================= -->
-    <div id="screen-main" class="screen active">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Динамика продаж</span>
-            </div>
-            <div class="chart-container">
-                <svg class="chart-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
-                    <defs>
-                        <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.25" />
-                            <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.0" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M 0 120 L 0 80 Q 100 40 200 70 T 400 30 T 600 50 L 600 120 Z" fill="url(#grad)" />
-                    <path d="M 0 80 Q 100 40 200 70 T 400 30 T 600 50" fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" />
-                </svg>
-                <div class="chart-labels">
-                    <span class="chart-axis-label">Май</span>
-                    <span class="chart-axis-label">Июн</span>
-                    <span class="chart-axis-label">Июл</span>
-                    <span class="chart-axis-label">Авг</span>
-                    <span class="chart-axis-label">Сен</span>
-                    <span class="chart-axis-label">Окт</span>
-                    <span class="chart-axis-label">Ноя</span>
-                </div>
-            </div>
+    <!-- БЛОК 1: График продаж (Месяц / Кол-во продаж) -->
+    <div class="bg-[#1E2533] rounded-2xl p-4 flex flex-col gap-2 border border-[#232B3B]">
+        <div class="flex justify-between items-center">
+            <span class="text-xs uppercase tracking-wider text-[#7E8BA2] font-semibold">Динамика продаж</span>
+            <span class="text-xs text-[#3B82F6] font-medium">Топ месяцев</span>
         </div>
-
-        <div class="card">
-            <div class="metric-row border">
-                <span class="metric-label">Общий оборот:</span>
-                <span class="metric-value" id="stat-total-revenue">0 ₽</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Всего активных заказов:</span>
-                <span class="metric-value" id="stat-total-orders">0 шт.</span>
-            </div>
-        </div>
-
-        <div class="grid">
-            <div onclick="switchScreen('orders')" class="btn">
-                <span class="btn-icon">💻</span>
-                <span class="btn-title">Заказы (Таблица)</span>
-                <span class="btn-desc">Ввод данных и расчет</span>
-            </div>
-            <div onclick="switchScreen('warehouse')" class="btn">
-                <span class="btn-icon">📦</span>
-                <span class="btn-title">Склад (3)</span>
-                <span class="btn-desc">Редактировать остатки</span>
-            </div>
+        <div class="w-full relative h-40 mt-1">
+            <canvas id="salesChart"></canvas>
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 2: ТАБЛИЦА ЗАКАЗОВ ================= -->
-    <div id="screen-orders" class="screen">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Редактирование заказов и статистики</span>
-            </div>
-            <div class="table-container">
-                <table id="orders-table">
-                    <thead>
-                        <tr>
-                            <th>Рейс / ID</th>
-                            <th>Кол-во (шт)</th>
-                            <th>Сумма (₽)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-order-id="Минск_88">
-                            <td>Минск_88</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">7</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">145000</td>
-                        </tr>
-                        <tr data-order-id="Минск_89">
-                            <td>Минск_89</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">5</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">105000</td>
-                        </tr>
-                        <tr data-order-id="Витебск_12">
-                            <td>Витебск_12</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">12</td>
-                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">200000</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- СРЕДНИЙ БЛОК: Экспресс-статистика (Метрики 6:7 и 8:9) -->
+    <div class="bg-[#1E2533] rounded-2xl p-4 flex flex-col gap-3 border border-[#232B3B]">
+        <div class="flex justify-between items-center text-sm border-b border-[#2C374E] pb-2.5">
+            <span class="text-[#7E8BA2]">Оборот (6):</span>
+            <span class="font-bold text-white text-base" id="metric-turnover">450 000 ₽ (7)</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+            <span class="text-[#7E8BA2]">Заказы (8):</span>
+            <span class="font-bold text-white text-base" id="metric-orders">1 250 шт. (9)</span>
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 3: СКЛАД ================= -->
-    <div id="screen-warehouse" class="screen">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Редактирование остатков склада</span>
-            </div>
-            <div class="table-container">
-                <table id="warehouse-table">
-                    <thead>
-                        <tr>
-                            <th>Товар</th>
-                            <th>Остаток (шт)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-product-id="Товар_1">
-                            <td>Товар #1</td>
-                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">240</td>
-                        </tr>
-                        <tr data-product-id="Товар_2">
-                            <td>Товар #2</td>
-                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">15</td>
-                        </tr>
-                        <tr data-product-id="Товар_3">
-                            <td>Товар #3</td>
-                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">89</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- СЕТКА НАВИГАЦИИ: Блоки 2, 3, 4, 5 -->
+    <div class="grid grid-cols-2 gap-3 mt-auto">
+        <!-- 2: Склад -->
+        <div onclick="handleNav('склад')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">📦</span>
+            <span class="font-semibold text-sm text-white mt-1">Склад (2)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Остатки и учет</span>
+        </div>
+        
+        <!-- 3: Статистика -->
+        <div onclick="handleNav('статистика')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">📊</span>
+            <span class="font-semibold text-sm text-white mt-1">Статистика (3)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Полный анализ</span>
+        </div>
+        
+        <!-- 4: Терминал заказов -->
+        <div onclick="handleNav('терминал')" class="bg-[#1E2533] border border-[#3B82F6] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-[#3B82F6] text-[9px] font-bold text-white px-1.5 py-0.5 rounded-bl-lg">LIVE</div>
+            <span class="text-xl">💻</span>
+            <span class="font-semibold text-sm text-white mt-1">Задания (4)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Список текущих</span>
+        </div>
+        
+        <!-- 5: Настройки -->
+        <div onclick="handleNav('настройки')" class="bg-[#1E2533] border border-[#232B3B] rounded-xl p-4 flex flex-col gap-1 active:bg-[#252F41] transition-colors cursor-pointer">
+            <span class="text-xl">⚙️</span>
+            <span class="font-semibold text-sm text-white mt-1">Настройки (5)</span>
+            <span class="text-[11px] text-[#7E8BA2]">Конфигурация</span>
         </div>
     </div>
 
     <script>
-        // Telegram WebApp (с защитой на случай запуска вне Telegram)
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-            tg.setHeaderColor('#141822');
-            tg.setBackgroundColor('#141822');
-        }
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Расширяем Mini App на весь экран смартфона
 
-        function haptic(type = 'light') {
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
-        }
+        // Изменяем нативные цвета шапки и статус-бара Telegram
+        tg.setHeaderColor('#141822');
+        tg.setBackgroundColor('#141822');
 
-        function parseNumber(text) {
-            if (!text) return 0;
-            const cleaned = String(text).replace(/[^\d.,-]/g, '').replace(',', '.');
-            const num = parseFloat(cleaned);
-            return isNaN(num) ? 0 : num;
-        }
-
-        function updateMainStatistics() {
-            let totalRevenue = 0;
-            let totalOrders = 0;
-            const rows = document.querySelectorAll('#orders-table tbody tr');
-            rows.forEach(row => {
-                const count = parseNumber(row.cells[1].innerText);
-                const revenue = parseNumber(row.cells[2].innerText);
-                totalOrders += count;
-                totalRevenue += revenue;
-            });
-            document.getElementById('stat-total-revenue').innerText =
-                totalRevenue.toLocaleString('ru-RU') + ' ₽';
-            document.getElementById('stat-total-orders').innerText =
-                totalOrders.toLocaleString('ru-RU') + ' шт.';
-        }
-
-        function recalculateStats(element) {
-            // Нормализуем значение ячейки
-            const value = parseNumber(element.innerText);
-            element.innerText = String(value);
-            updateMainStatistics();
-
-            const row = element.closest('tr');
-            if (!row) return;
-            const orderId = row.getAttribute('data-order-id');
-            const currentCount = parseNumber(row.cells[1].innerText);
-            const currentRevenue = parseNumber(row.cells[2].innerText);
-
-            haptic('light');
-            if (tg && tg.sendData) {
-                tg.sendData(`update_table:${orderId}:${currentCount}:${currentRevenue}`);
+        // Логика нажатий на кнопки (передача событий обратно в бота)
+        function handleNav(target) {
+            // Легкая вибрация смартфона при клике (нативный фидбек)
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
             }
+            
+            // Отправляем текстовое сообщение боту и закрываем окно (опционально)
+            tg.sendData("action_open_" + target);
         }
 
-        function saveWarehouseChange(element) {
-            const value = parseNumber(element.innerText);
-            element.innerText = String(value);
+        // Рендеринг Элегантного Графика (Блок 1)
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Создаем аккуратный вертикальный градиент под линией графика
+        const chartGradiant = ctx.createLinearGradient(0, 0, 0, 160);
+        chartGradiant.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+        chartGradiant.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
-            const row = element.closest('tr');
-            if (!row) return;
-            const productId = row.getAttribute('data-product-id');
-            const currentStock = parseNumber(row.cells[1].innerText);
-
-            haptic('light');
-            if (tg && tg.sendData) {
-                tg.sendData(`update_warehouse:${productId}:${currentStock}`);
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя'],
+                datasets: [{
+                    data: [420, 580, 490, 710, 680, 850, 920],
+                    borderColor: '#3B82F6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3B82F6',
+                    pointHoverBackgroundColor: '#3B82F6', // hover отключен на уровне CSS, сохраняем стабильность цвета
+                    fill: true,
+                    backgroundColor: chartGradiant,
+                    tension: 0.4, // Гладкие Spline углы
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false } // Отключаем легенду, чтобы освободить место
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#52627A', font: { size: 10 } }
+                    },
+                    y: {
+                        display: false, // Скрываем ось Y для сохранения минимализма
+                        grid: { display: false }
+                    }
+                }
             }
-        }
-
-        function switchScreen(screenName) {
-            haptic('light');
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            const screenEl = document.getElementById('screen-' + screenName);
-            if (screenEl) screenEl.classList.add('active');
-
-            const titles = {
-                orders: 'ТАБЛИЦА ЗАКАЗОВ',
-                warehouse: 'УЧЁТ СКЛАДА'
-            };
-            document.getElementById('header-title').innerText = titles[screenName] || 'ТЕРМИНАЛ ЗАКАЗОВ';
-            document.getElementById('back-button').style.display = 'block';
-        }
-
-        function showMainScreen() {
-            haptic('light');
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('screen-main').classList.add('active');
-            document.getElementById('header-title').innerText = 'ТЕРМИНАЛ ЗАКАЗОВ';
-            document.getElementById('back-button').style.display = 'none';
-        }
-
-        window.addEventListener('load', updateMainStatistics);
-        // на случай, если load уже прошёл
-        if (document.readyState === 'complete') updateMainStatistics();
+        });
     </script>
 </body>
 </html>
