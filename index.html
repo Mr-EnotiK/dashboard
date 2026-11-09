@@ -2,11 +2,10 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-    <title>Панель Управления</title>
-    <script src="https://telegram.org"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Терминал Заказов</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Базовые настройки и палитра */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -22,9 +21,8 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
-            min-h-screen;
+            min-height: 100vh;
         }
-        /* Шапка */
         .header {
             display: flex;
             justify-content: space-between;
@@ -37,15 +35,17 @@
             color: #7E8BA2;
             letter-spacing: 0.5px;
         }
-        .status {
+        .back-btn {
             font-size: 12px;
             background-color: #1E2533;
             color: #3B82F6;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #232B3B;
+            display: none;
         }
-        /* Карточки-контейнеры */
         .card {
             background-color: #1E2533;
             border-radius: 16px;
@@ -59,6 +59,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 4px;
         }
         .card-title {
             font-size: 12px;
@@ -67,12 +68,43 @@
             color: #7E8BA2;
             font-weight: 600;
         }
-        .card-subtitle {
-            font-size: 12px;
-            color: #3B82F6;
-            font-weight: 500;
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 4px;
         }
-        /* Строки метрик 6:7 и 8:9 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+        th {
+            color: #7E8BA2;
+            font-weight: 600;
+            padding: 10px 8px;
+            border-bottom: 1px solid #2C374E;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #232B3B;
+            color: #ffffff;
+        }
+        .editable {
+            color: #3B82F6;
+            font-weight: 600;
+            outline: none;
+            border-bottom: 1px dashed #3B82F6;
+            user-select: text;
+        }
+        .editable:focus {
+            background-color: #242D3E;
+            border-bottom: 1px solid #3B82F6;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
         .metric-row {
             display: flex;
             justify-content: space-between;
@@ -91,7 +123,6 @@
             color: #ffffff;
             font-size: 16px;
         }
-        /* Сетка плиток навигации */
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -111,10 +142,6 @@
         .btn:active {
             background-color: #252F41;
         }
-        .btn-active-border {
-            border-color: #3B82F6;
-            position: relative;
-        }
         .btn-icon {
             font-size: 20px;
         }
@@ -128,22 +155,9 @@
             font-size: 11px;
             color: #7E8BA2;
         }
-        .badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background-color: #3B82F6;
-            color: #ffffff;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 0 11px 0 8px;
-        }
-        /* Автономный SVG График продаж (Блок 1) */
         .chart-container {
             width: 100%;
             height: 140px;
-            margin-top: 4px;
             display: flex;
             flex-direction: column;
         }
@@ -161,106 +175,243 @@
             font-size: 10px;
             color: #52627A;
         }
+        .screen {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+        .screen.active {
+            display: flex;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Заголовок -->
     <div class="header">
-        <h1>ТЕРМИНАЛ ЗАКАЗОВ</h1>
-        <span class="status">Online</span>
+        <h1 id="header-title">ТЕРМИНАЛ ЗАКАЗОВ</h1>
+        <div id="back-button" class="back-btn" onclick="showMainScreen()">Назад</div>
     </div>
 
-    <!-- БЛОК 1: График продаж -->
-    <div class="card">
-        <div class="card-header">
-            <span class="card-title">Динамика продаж</span>
-            <span class="card-subtitle">Топ месяцев</span>
+    <!-- ================= ЭКРАН 1: ГЛАВНЫЙ ================= -->
+    <div id="screen-main" class="screen active">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Динамика продаж</span>
+            </div>
+            <div class="chart-container">
+                <svg class="chart-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.25" />
+                            <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.0" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M 0 120 L 0 80 Q 100 40 200 70 T 400 30 T 600 50 L 600 120 Z" fill="url(#grad)" />
+                    <path d="M 0 80 Q 100 40 200 70 T 400 30 T 600 50" fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" />
+                </svg>
+                <div class="chart-labels">
+                    <span class="chart-axis-label">Май</span>
+                    <span class="chart-axis-label">Июн</span>
+                    <span class="chart-axis-label">Июл</span>
+                    <span class="chart-axis-label">Авг</span>
+                    <span class="chart-axis-label">Сен</span>
+                    <span class="chart-axis-label">Окт</span>
+                    <span class="chart-axis-label">Ноя</span>
+                </div>
+            </div>
         </div>
-        <div class="chart-container">
-            <!-- Рисуем элегантный сглаженный график через чистый SVG, независимый от библиотек -->
-            <svg class="chart-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
-                <defs>
-                    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.25" />
-                        <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.0" />
-                    </linearGradient>
-                </defs>
-                <!-- Заливка под графиком -->
-                <path d="M 0 120 L 0 80 Q 100 40 200 70 T 400 30 T 600 50 L 600 120 Z" fill="url(#grad)" />
-                <!-- Основная синяя линия -->
-                <path d="M 0 80 Q 100 40 200 70 T 400 30 T 600 50" fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" />
-            </svg>
-            <div class="chart-labels">
-                <span class="chart-axis-label">Май</span>
-                <span class="chart-axis-label">Июн</span>
-                <span class="chart-axis-label">Июл</span>
-                <span class="chart-axis-label">Авг</span>
-                <span class="chart-axis-label">Сен</span>
-                <span class="chart-axis-label">Окт</span>
-                <span class="chart-axis-label">Ноя</span>
+
+        <div class="card">
+            <div class="metric-row border">
+                <span class="metric-label">Общий оборот:</span>
+                <span class="metric-value" id="stat-total-revenue">0 ₽</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Всего активных заказов:</span>
+                <span class="metric-value" id="stat-total-orders">0 шт.</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div onclick="switchScreen('orders')" class="btn">
+                <span class="btn-icon">💻</span>
+                <span class="btn-title">Заказы (Таблица)</span>
+                <span class="btn-desc">Ввод данных и расчет</span>
+            </div>
+            <div onclick="switchScreen('warehouse')" class="btn">
+                <span class="btn-icon">📦</span>
+                <span class="btn-title">Склад (3)</span>
+                <span class="btn-desc">Редактировать остатки</span>
             </div>
         </div>
     </div>
 
-    <!-- СРЕДНИЙ БЛОК: Экспресс-статистика -->
-    <div class="card">
-        <div class="metric-row border">
-            <span class="metric-label">Оборот (6):</span>
-            <span class="metric-value">450 000 ₽ (7)</span>
-        </div>
-        <div class="metric-row">
-            <span class="metric-label">Заказы (8):</span>
-            <span class="metric-value">1 250 шт. (9)</span>
+    <!-- ================= ЭКРАН 2: ТАБЛИЦА ЗАКАЗОВ ================= -->
+    <div id="screen-orders" class="screen">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Редактирование заказов и статистики</span>
+            </div>
+            <div class="table-container">
+                <table id="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Рейс / ID</th>
+                            <th>Кол-во (шт)</th>
+                            <th>Сумма (₽)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-order-id="Минск_88">
+                            <td>Минск_88</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">7</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">145000</td>
+                        </tr>
+                        <tr data-order-id="Минск_89">
+                            <td>Минск_89</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">5</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">105000</td>
+                        </tr>
+                        <tr data-order-id="Витебск_12">
+                            <td>Витебск_12</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">12</td>
+                            <td class="editable" contenteditable="true" onblur="recalculateStats(this)">200000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- СЕТКА НАВИГАЦИИ: Блоки 2, 3, 4, 5 -->
-    <div class="grid">
-        <!-- 2: Склад -->
-        <div onclick="handleNav('склад')" class="btn">
-            <span class="btn-icon">📦</span>
-            <span class="btn-title">Склад (2)</span>
-            <span class="btn-desc">Остатки и учет</span>
-        </div>
-        
-        <!-- 3: Статистика -->
-        <div onclick="handleNav('статистика')" class="btn">
-            <span class="btn-icon">📊</span>
-            <span class="btn-title">Статистика (3)</span>
-            <span class="btn-desc">Полный анализ</span>
-        </div>
-        
-        <!-- 4: Терминал заказов -->
-        <div onclick="handleNav('терминал')" class="btn btn-active-border">
-            <div class="badge">LIVE</div>
-            <span class="btn-icon">💻</span>
-            <span class="btn-title">Задания (4)</span>
-            <span class="btn-desc">Список текущих</span>
-        </div>
-        
-        <!-- 5: Настройки -->
-        <div onclick="handleNav('настройки')" class="btn">
-            <span class="btn-icon">⚙️</span>
-            <span class="btn-title">Настройки (5)</span>
-            <span class="btn-desc">Конфигурация</span>
+    <!-- ================= ЭКРАН 3: СКЛАД ================= -->
+    <div id="screen-warehouse" class="screen">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Редактирование остатков склада</span>
+            </div>
+            <div class="table-container">
+                <table id="warehouse-table">
+                    <thead>
+                        <tr>
+                            <th>Товар</th>
+                            <th>Остаток (шт)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-product-id="Товар_1">
+                            <td>Товар #1</td>
+                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">240</td>
+                        </tr>
+                        <tr data-product-id="Товар_2">
+                            <td>Товар #2</td>
+                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">15</td>
+                        </tr>
+                        <tr data-product-id="Товар_3">
+                            <td>Товар #3</td>
+                            <td class="editable" contenteditable="true" onblur="saveWarehouseChange(this)">89</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-
-        tg.setHeaderColor('#141822');
-        tg.setBackgroundColor('#141822');
-
-        function handleNav(target) {
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            tg.sendData("action_open_" + target);
+        // Telegram WebApp (с защитой на случай запуска вне Telegram)
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            tg.setHeaderColor('#141822');
+            tg.setBackgroundColor('#141822');
         }
+
+        function haptic(type = 'light') {
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+        }
+
+        function parseNumber(text) {
+            if (!text) return 0;
+            const cleaned = String(text).replace(/[^\d.,-]/g, '').replace(',', '.');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function updateMainStatistics() {
+            let totalRevenue = 0;
+            let totalOrders = 0;
+            const rows = document.querySelectorAll('#orders-table tbody tr');
+            rows.forEach(row => {
+                const count = parseNumber(row.cells[1].innerText);
+                const revenue = parseNumber(row.cells[2].innerText);
+                totalOrders += count;
+                totalRevenue += revenue;
+            });
+            document.getElementById('stat-total-revenue').innerText =
+                totalRevenue.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('stat-total-orders').innerText =
+                totalOrders.toLocaleString('ru-RU') + ' шт.';
+        }
+
+        function recalculateStats(element) {
+            // Нормализуем значение ячейки
+            const value = parseNumber(element.innerText);
+            element.innerText = String(value);
+            updateMainStatistics();
+
+            const row = element.closest('tr');
+            if (!row) return;
+            const orderId = row.getAttribute('data-order-id');
+            const currentCount = parseNumber(row.cells[1].innerText);
+            const currentRevenue = parseNumber(row.cells[2].innerText);
+
+            haptic('light');
+            if (tg && tg.sendData) {
+                tg.sendData(`update_table:${orderId}:${currentCount}:${currentRevenue}`);
+            }
+        }
+
+        function saveWarehouseChange(element) {
+            const value = parseNumber(element.innerText);
+            element.innerText = String(value);
+
+            const row = element.closest('tr');
+            if (!row) return;
+            const productId = row.getAttribute('data-product-id');
+            const currentStock = parseNumber(row.cells[1].innerText);
+
+            haptic('light');
+            if (tg && tg.sendData) {
+                tg.sendData(`update_warehouse:${productId}:${currentStock}`);
+            }
+        }
+
+        function switchScreen(screenName) {
+            haptic('light');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const screenEl = document.getElementById('screen-' + screenName);
+            if (screenEl) screenEl.classList.add('active');
+
+            const titles = {
+                orders: 'ТАБЛИЦА ЗАКАЗОВ',
+                warehouse: 'УЧЁТ СКЛАДА'
+            };
+            document.getElementById('header-title').innerText = titles[screenName] || 'ТЕРМИНАЛ ЗАКАЗОВ';
+            document.getElementById('back-button').style.display = 'block';
+        }
+
+        function showMainScreen() {
+            haptic('light');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-main').classList.add('active');
+            document.getElementById('header-title').innerText = 'ТЕРМИНАЛ ЗАКАЗОВ';
+            document.getElementById('back-button').style.display = 'none';
+        }
+
+        window.addEventListener('load', updateMainStatistics);
+        // на случай, если load уже прошёл
+        if (document.readyState === 'complete') updateMainStatistics();
     </script>
 </body>
 </html>
